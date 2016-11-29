@@ -29,6 +29,7 @@ public class MatterGun : MonoBehaviour {
 	private Vector3 impactPointOffset = new Vector3();					// Tracks world-space offset of the grabbed point
 	private CollisionDetectionMode rbMode;								// Stores the collision mode of the rigidbody so it can be reverted when dropped
 	private float holdDistance = 0;										// Tracks how far away from the player the object should be held
+	private bool throwLockMouse = false;								// Disables an object from being picked up immediately after being thrown with the gun
 
 	void Start () 
 	{
@@ -63,70 +64,81 @@ public class MatterGun : MonoBehaviour {
 
 	void FixedUpdate () 
 	{
-		if (cam && Input.GetMouseButton(0))		// If the gun is being used...
+		if (cam)
 		{
-			if (!rb)		// If the gun is waiting to pick up a new object...
+			if (Input.GetMouseButton(0) && !throwLockMouse)		// If the gun is being used, and throw lock is not enabled...
 			{
-				// ... raycast to find the first object infront of the player
-				RaycastHit[] hits = Physics.RaycastAll (ray, range);
-
-				// Ignore any collisions with the player
-				hits = hits.IgnoreChildren(this.gameObject);
-
-				if (hits.Length > 0)
+				if (!rb)		// If the gun is waiting to pick up a new object...
 				{
-					// Order the array by distance from the player. (The order of a RaycastAll is not guaranteed and will sometimes be ordered backwards)
-					hits = hits.OrderByDistance(ray.origin);
-					
-					// Get the closest object
-					hit = hits[0];
+					// ... raycast to find the first object infront of the player
+					RaycastHit[] hits = Physics.RaycastAll (ray, range);
 
-					if (hit.transform)		// Double check the hit exists to avoid null reference exceptions
+					// Ignore any collisions with the player
+					hits = hits.IgnoreChildren(this.gameObject);
+
+					if (hits.Length > 0)
 					{
-						// Get the rigidbody of the object the player is aiming at
-						rb = hit.transform.GetComponent<Rigidbody>();
+						// Order the array by distance from the player. (The order of a RaycastAll is not guaranteed and will sometimes be ordered backwards)
+						hits = hits.OrderByDistance(ray.origin);
 
-						if (rb)		// If a rigidbody was successfully found...
+						// Get the closest object
+						hit = hits[0];
+
+						if (hit.transform)		// Double check the hit exists to avoid null reference exceptions
 						{
-							// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
-							//impactPointInitial = hit.point - hit.transform.position;
-							impactPointLocal = rb.transform.InverseTransformVector(hit.point - hit.transform.position);
-							RecalculateGrabPoint();
+							// Get the rigidbody of the object the player is aiming at
+							rb = hit.transform.GetComponent<Rigidbody>();
 
-							rbMode = rb.collisionDetectionMode;
-							rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-							rb.interpolation = RigidbodyInterpolation.Interpolate;
+							if (rb)		// If a rigidbody was successfully found...
+							{
+								// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
+								impactPointLocal = rb.transform.InverseTransformVector(hit.point - hit.transform.position);
+								RecalculateGrabPoint();
 
-							// Also store the current distance between the player and the object
-							holdDistance = Vector3.Distance(cam.transform.position, hit.point);
+								rbMode = rb.collisionDetectionMode;
+								rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+								rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+								// Also store the current distance between the player and the object
+								holdDistance = Vector3.Distance(cam.transform.position, hit.point);
+
+								// TODO: OUTLINE THE OBJECT IN SOME WAY TO SHOW IT IS SELECTED
+							}
 						}
 					}
 				}
-			}
 
-			// Allow the player to move the object
-			HandleMovement();
-		}
-		else
-		{
-			// Gun is not being used, reset changed properties on the rigidbody
-			if (rb)
+				// Allow the player to move the object
+				HandleMovement();
+
+				// Allow the player to throw the object
+				HandleThrow();
+			}
+			else
 			{
-				// TODO: remove outline here. Not sure yet how this outline will even be achieved.
+				// Gun is not being used, reset changed properties on the rigidbody
+				if (rb)
+				{
+					// TODO: remove outline here. Not sure yet how this outline will even be achieved.
 
-				// Reset collision detection mode
-				rb.collisionDetectionMode = rbMode;
+					// Reset collision detection mode
+					rb.collisionDetectionMode = rbMode;
 
-				// Reset interpolation settings
-				rb.interpolation = RigidbodyInterpolation.None;
+					// Reset interpolation settings
+					rb.interpolation = RigidbodyInterpolation.None;
+				}
+
+				// Unlock mouse pickup
+				if (!Input.GetMouseButton(0))
+					throwLockMouse = false;
+
+				// Drop rigidbody object being manipulated
+				rb = null;
 			}
 
-			// Drop rigidbody object being manipulated
-			rb = null;
+			// Allow the player to rotate the object
+			HandleRotation();
 		}
-
-		// Allow the player to rotate the object
-		HandleRotation();
 	}
 
 	private void HandleMovement()		// Applies physics manipulation to the held object
@@ -162,6 +174,21 @@ public class MatterGun : MonoBehaviour {
 		impactPointOffset = rb.transform.TransformVector(impactPointLocal);
 	}
 
+	private void HandleThrow()		// Throw the object away from the player
+	{
+		if (rb && Input.GetMouseButton(1))
+		{
+			// Lock mouse pickup, so the object is not immediately captured again. The user will have to let go of the mouse button to pick objects up again
+			throwLockMouse = true;
+
+			// Apply a force in the direction the player is facing
+			rb.AddForce (ray.direction * strength * 2, ForceMode.VelocityChange);
+
+			// Release the object
+			rb = null;
+		}
+	}
+
 	private void HandleZoom()		// Zoom the object closer to or further away from the player, based on scroll wheel input
 	{
 		float zoom = Input.GetAxis("Mouse ScrollWheel");
@@ -187,7 +214,7 @@ public class MatterGun : MonoBehaviour {
 			Debug.Log("MoveDir: " + moveDirection);
 			Debug.Log("Rotation: " + rb.rotation.eulerAngles);
 			//TODO: FINISH IMPLEMENTING ROTATION. CURRENT STUCK ON BUG WHERE ROTATING VIA QUATERNION ROTATION GETS STUCK AT 90 AND 270 DEGREES??
-			//rb.MoveRotation(Quaternion.Euler(moveDirection + rb.rotation.eulerAngles));
+			rb.MoveRotation(Quaternion.Euler(moveDirection + rb.rotation.eulerAngles));
 		}
 		else
 		{
