@@ -21,14 +21,14 @@ public class MatterGun : MonoBehaviour {
 	private Rigidbody rb;												// Stores the currently held rigidbody component
 	private Camera cam;													// Reference to the main camera (the player's vision)
 	private Vector3 centerScreen = new Vector3();						// The center of the player's screen in pixels
+	private PlayerAim aimScript;										// Reference to the aim script. This allows aiming to be disabled while rotating an object
 
 	private Ray ray;													// A ray used to find the objects in front of the player
 	private RaycastHit hit;												// The hit info for the object currently being manipulated
-	private Vector3 impactPointInitial = new Vector3();					// Initial offset of the grabbed point, used to calculate current grab offset
-	private Quaternion impactRotation;									// Initial rotation of the grabbed object, used to calculate current grab offset
-	private Vector3 impactPointOffset = new Vector3();					// Tracks offset of the grabbed point
+	private Vector3 impactPointLocal = new Vector3();					// Offset of the grabbed point in local-space
+	private Vector3 impactPointOffset = new Vector3();					// Tracks world-space offset of the grabbed point
 	private CollisionDetectionMode rbMode;								// Stores the collision mode of the rigidbody so it can be reverted when dropped
-	private float holdDistance = 0;
+	private float holdDistance = 0;										// Tracks how far away from the player the object should be held
 
 	void Start () 
 	{
@@ -37,6 +37,9 @@ public class MatterGun : MonoBehaviour {
 
 		// Find the center of the screen in pixels
 		centerScreen = new Vector3 ((cam.pixelWidth / 2), (cam.pixelHeight / 2), 0);
+
+		// Find the player's aiming script
+		aimScript = transform.GetComponentInParent<PlayerAim>();
 	}
 
 	void Update ()
@@ -86,9 +89,9 @@ public class MatterGun : MonoBehaviour {
 						if (rb)		// If a rigidbody was successfully found...
 						{
 							// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
-							impactPointInitial = hit.point - hit.transform.position;
-							impactPointOffset = impactPointInitial;
-							impactRotation = hit.transform.rotation;
+							//impactPointInitial = hit.point - hit.transform.position;
+							impactPointLocal = rb.transform.InverseTransformVector(hit.point - hit.transform.position);
+							RecalculateGrabPoint();
 
 							rbMode = rb.collisionDetectionMode;
 							rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
@@ -101,8 +104,8 @@ public class MatterGun : MonoBehaviour {
 				}
 			}
 
-			// Play with the physics of the object
-			ExecutePhysics();
+			// Allow the player to move the object
+			HandleMovement();
 		}
 		else
 		{
@@ -121,9 +124,12 @@ public class MatterGun : MonoBehaviour {
 			// Drop rigidbody object being manipulated
 			rb = null;
 		}
+
+		// Allow the player to rotate the object
+		HandleRotation();
 	}
 
-	private void ExecutePhysics()		// Applies physics manipulation to the held object
+	private void HandleMovement()		// Applies physics manipulation to the held object
 	{
 		if (rb)		// If the gun is currently holding an object...
 		{
@@ -153,13 +159,10 @@ public class MatterGun : MonoBehaviour {
 
 	private void RecalculateGrabPoint()
 	{
-		// Calculate where the initially grabbed point is now in relation to the object's transform position
-		//TODO: FINISH THIS SO THE GUN WILL CONTINUE TO HOLD ON TO THE SAME POINT EVEN IF THE OBJECT IS ROTATED WHILE HELD
-
-		Vector3 rotationDifference = rb.transform.rotation.eulerAngles - impactRotation.eulerAngles;
+		impactPointOffset = rb.transform.TransformVector(impactPointLocal);
 	}
 
-	private void HandleZoom()
+	private void HandleZoom()		// Zoom the object closer to or further away from the player, based on scroll wheel input
 	{
 		float zoom = Input.GetAxis("Mouse ScrollWheel");
 		if (zoom != 0)
@@ -167,6 +170,30 @@ public class MatterGun : MonoBehaviour {
 			holdDistance += zoom * 10;
 			holdDistance = Mathf.Clamp (holdDistance, 4, range);
 			//TODO: Take into account collider bounds with minimum distance
+		}
+	}
+
+	private void HandleRotation()		// Allow the player to rotate the object if they are holding down the scroll wheel
+	{
+		if (rb && Input.GetMouseButton(2))		// If an object is held and the player is rotating...
+		{
+			// ... Disable the player's aiming
+			if (aimScript)
+				aimScript.enabled = false;
+
+			// Rotate the object based on the mouse movement
+			Vector3 moveDirection = new Vector3 (Input.GetAxis("Mouse Y"), -(Input.GetAxis("Mouse X")), 0);
+			moveDirection *= 10;
+			Debug.Log("MoveDir: " + moveDirection);
+			Debug.Log("Rotation: " + rb.rotation.eulerAngles);
+			//TODO: FINISH IMPLEMENTING ROTATION. CURRENT STUCK ON BUG WHERE ROTATING VIA QUATERNION ROTATION GETS STUCK AT 90 AND 270 DEGREES??
+			//rb.MoveRotation(Quaternion.Euler(moveDirection + rb.rotation.eulerAngles));
+		}
+		else
+		{
+			// Enable the player's aiming
+			if (aimScript)
+				aimScript.enabled = true;
 		}
 	}
 
