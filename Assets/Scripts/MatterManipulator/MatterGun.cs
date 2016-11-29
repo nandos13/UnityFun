@@ -13,9 +13,10 @@ public class MatterGun : MonoBehaviour {
 
 	public Transform origin;											// Muzzle point for the gun. This determines where the rendered line will start
 	public LineRenderer line;											// LineRenderer component used
-	[Range (5.0f, 50.0f)]
+	[Range (5.0f, 300.0f)]
 	public float range = 30.0f;											// Maximum range of the gun
-	public float strength = 10.0f;										// Strength of the gun. TODO: IMPLEMENT THIS!!!
+	[Range (0.0f, 100.0f)]
+	public float strength = 100.0f;										// Strength of the gun. TODO: IMPLEMENT THIS!!!
 
 	private Rigidbody rb;												// Stores the currently held rigidbody component
 	private Camera cam;													// Reference to the main camera (the player's vision)
@@ -23,9 +24,10 @@ public class MatterGun : MonoBehaviour {
 
 	private Ray ray;													// A ray used to find the objects in front of the player
 	private RaycastHit hit;												// The hit info for the object currently being manipulated
-	private Vector3 impactPointOffset = new Vector3();					// Offset of the grabbed point
+	private Vector3 impactPoint = new Vector3();						// Initial offset of the grabbed point, used to calculate current grab offset
+	private Quaternion impactRotation;									// Initial rotation of the grabbed object, used to calculate current grab offset
+	private Vector3 impactPointOffset = new Vector3();					// Tracks offset of the grabbed point
 	private float holdDistance = 0;
-	private Ray floorCheckRay;
 
 	void Start () 
 	{
@@ -34,9 +36,6 @@ public class MatterGun : MonoBehaviour {
 
 		// Find the center of the screen in pixels
 		centerScreen = new Vector3 ((cam.pixelWidth / 2), (cam.pixelHeight / 2), 0);
-
-		// Initialize the floor checking ray
-		floorCheckRay = new Ray (new Vector3(0, Mathf.Infinity, 0), Vector3.down);
 	}
 
 	void Update ()
@@ -48,6 +47,12 @@ public class MatterGun : MonoBehaviour {
 		// Find the center of the screen in pixels, incase the player's screen resolution has changed
 		centerScreen.x = cam.pixelWidth / 2;
 		centerScreen.y = cam.pixelHeight / 2;
+
+		if (rb)		// If the gun is currently holding an object...
+		{
+			// ... Recalculate the position of the part which was grabbed
+			RecalculateGrabPoint();
+		}
 	}
 
 	void FixedUpdate () 
@@ -75,7 +80,9 @@ public class MatterGun : MonoBehaviour {
 						if (rb)		// If a rigidbody was successfully found...
 						{
 							// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
-							impactPointOffset = hit.point - hit.transform.position;		// NOTE: This may need to be rewritten to support ragdoll objects
+							impactPoint = hit.point - hit.transform.position;
+							impactPointOffset = impactPoint;
+							impactRotation = hit.transform.rotation;
 
 							// Also store the current distance between the player and the object
 							holdDistance = Vector3.Distance(cam.transform.position, hit.point);
@@ -117,44 +124,23 @@ public class MatterGun : MonoBehaviour {
 			// Remove any velocity
 			rb.velocity = Vector3.zero;
 
-			// Check if the desired position is below the floor
-			FloorCheck(ref holdPointWorld);
+			// Find vector from the grab point's current position to the desired destination
+			Vector3 grabPointToDestination = holdPointWorld - (rb.transform.position + impactPointOffset);
+
+			// Calculate how much force to apply to the object
+			Vector3 force = (grabPointToDestination * strength);
+
+			Debug.Log (force.magnitude);
 
 			// Move the rigidbody to the desired position
-			rb.MovePosition(holdPointWorld - impactPointOffset);
+			rb.AddForce (force, ForceMode.VelocityChange);
 		}
 	}
 
-	private void FloorCheck (ref Vector3 desiredPosition)
+	private void RecalculateGrabPoint()
 	{
-		// TODO: IMPLEMENT THIS TO STOP THE OBJECT FROM BEING PLACEABLE IN THE GROUND
-
-
-
-
-		/*
-		// Update ray origin information
-		Vector3 newFloorCheckOrigin = floorCheckRay.origin;
-		newFloorCheckOrigin.x = desiredPosition.x;
-		newFloorCheckOrigin.z = desiredPosition.z;
-		floorCheckRay.origin = newFloorCheckOrigin;
-
-		// Raycast to find floor's position
-		RaycastHit[] floorHits = Physics.RaycastAll(floorCheckRay);
-
-		// Find the y-position of the floor
-		float floorY = 0;
-		foreach (RaycastHit h in floorHits)
-		{
-			if (h)		// Verify the hit exists
-			{
-				if (h.transform.tag == "Floor")
-				{
-					
-				}
-			}
-		}
-		*/
+		// Calculate where the initially grabbed point is now in relation to the object's transform position
+		//TODO: FINISH THIS SO THE GUN WILL CONTINUE TO HOLD ON TO THE SAME POINT EVEN IF THE OBJECT IS ROTATED WHILE HELD
 	}
 
 	void OnDrawGizmosSelected ()
