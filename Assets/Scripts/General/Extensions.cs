@@ -150,6 +150,35 @@ public static class Extensions {
 		return newHitsList.ToArray();
 	}
 
+	public static RaycastHit[] OrderByDistance (this RaycastHit[] target, Vector3 origin)
+	{
+		/* Return an array of RaycastHit ordered by distance between the hit.point and
+		 * specified Vector3 "origin"
+		 * This will combat the un guaranteed nature of the return order of a RaycastAll function
+		 */
+
+		RaycastHit[] result = target;
+		RaycastHit temp;
+		for (int i = target.Length - 1; i > 0; i--)
+		{
+			// Check the RaycastHit at current index against the one at index i - 1
+			if (Vector3.Distance (result[i].point, origin) < Vector3.Distance (result[i-1].point, origin))
+			{
+				// The two should be switched around
+				temp = result[i-1];
+				result[i-1] = result[i];
+				result[i] = temp;
+
+				// Increment index to re check the switched RaycastHits properly
+				i = i + 2;
+				if (i >= result.Length)
+					i = result.Length - 1;
+			}
+		}
+
+		return result;
+	}
+
 	public static T[] ToArray<T> (this List<T> target)
 	{
 		/* Convert a List of type T to an array containing type T */

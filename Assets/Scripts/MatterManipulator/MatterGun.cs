@@ -16,7 +16,7 @@ public class MatterGun : MonoBehaviour {
 	[Range (5.0f, 300.0f)]
 	public float range = 30.0f;											// Maximum range of the gun
 	[Range (0.0f, 100.0f)]
-	public float strength = 100.0f;										// Strength of the gun. TODO: IMPLEMENT THIS!!!
+	public float strength = 100.0f;										// Strength of the gun
 
 	private Rigidbody rb;												// Stores the currently held rigidbody component
 	private Camera cam;													// Reference to the main camera (the player's vision)
@@ -24,9 +24,10 @@ public class MatterGun : MonoBehaviour {
 
 	private Ray ray;													// A ray used to find the objects in front of the player
 	private RaycastHit hit;												// The hit info for the object currently being manipulated
-	private Vector3 impactPoint = new Vector3();						// Initial offset of the grabbed point, used to calculate current grab offset
+	private Vector3 impactPointInitial = new Vector3();					// Initial offset of the grabbed point, used to calculate current grab offset
 	private Quaternion impactRotation;									// Initial rotation of the grabbed object, used to calculate current grab offset
 	private Vector3 impactPointOffset = new Vector3();					// Tracks offset of the grabbed point
+	private CollisionDetectionMode rbMode;								// Stores the collision mode of the rigidbody so it can be reverted when dropped
 	private float holdDistance = 0;
 
 	void Start () 
@@ -52,6 +53,8 @@ public class MatterGun : MonoBehaviour {
 		{
 			// ... Recalculate the position of the part which was grabbed
 			RecalculateGrabPoint();
+
+			HandleZoom();
 		}
 	}
 
@@ -69,6 +72,9 @@ public class MatterGun : MonoBehaviour {
 
 				if (hits.Length > 0)
 				{
+					// Order the array by distance from the player. (The order of a RaycastAll is not guaranteed and will sometimes be ordered backwards)
+					hits = hits.OrderByDistance(ray.origin);
+					
 					// Get the closest object
 					hit = hits[0];
 
@@ -80,9 +86,13 @@ public class MatterGun : MonoBehaviour {
 						if (rb)		// If a rigidbody was successfully found...
 						{
 							// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
-							impactPoint = hit.point - hit.transform.position;
-							impactPointOffset = impactPoint;
+							impactPointInitial = hit.point - hit.transform.position;
+							impactPointOffset = impactPointInitial;
 							impactRotation = hit.transform.rotation;
+
+							rbMode = rb.collisionDetectionMode;
+							rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+							rb.interpolation = RigidbodyInterpolation.Interpolate;
 
 							// Also store the current distance between the player and the object
 							holdDistance = Vector3.Distance(cam.transform.position, hit.point);
@@ -99,7 +109,13 @@ public class MatterGun : MonoBehaviour {
 			// Gun is not being used, reset changed properties on the rigidbody
 			if (rb)
 			{
-				// TODO: remove outline. Not sure yet how this outline will even be achieved.
+				// TODO: remove outline here. Not sure yet how this outline will even be achieved.
+
+				// Reset collision detection mode
+				rb.collisionDetectionMode = rbMode;
+
+				// Reset interpolation settings
+				rb.interpolation = RigidbodyInterpolation.None;
 			}
 
 			// Drop rigidbody object being manipulated
@@ -130,8 +146,6 @@ public class MatterGun : MonoBehaviour {
 			// Calculate how much force to apply to the object
 			Vector3 force = (grabPointToDestination * strength);
 
-			Debug.Log (force.magnitude);
-
 			// Move the rigidbody to the desired position
 			rb.AddForce (force, ForceMode.VelocityChange);
 		}
@@ -141,6 +155,19 @@ public class MatterGun : MonoBehaviour {
 	{
 		// Calculate where the initially grabbed point is now in relation to the object's transform position
 		//TODO: FINISH THIS SO THE GUN WILL CONTINUE TO HOLD ON TO THE SAME POINT EVEN IF THE OBJECT IS ROTATED WHILE HELD
+
+		Vector3 rotationDifference = rb.transform.rotation.eulerAngles - impactRotation.eulerAngles;
+	}
+
+	private void HandleZoom()
+	{
+		float zoom = Input.GetAxis("Mouse ScrollWheel");
+		if (zoom != 0)
+		{
+			holdDistance += zoom * 10;
+			holdDistance = Mathf.Clamp (holdDistance, 4, range);
+			//TODO: Take into account collider bounds with minimum distance
+		}
 	}
 
 	void OnDrawGizmosSelected ()
