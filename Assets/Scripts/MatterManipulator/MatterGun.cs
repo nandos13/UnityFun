@@ -45,13 +45,13 @@ public class MatterGun : MonoBehaviour {
 
 	void Update ()
 	{
-		// Update the ray from the player's view to be used for finding and manipulating objects
-		if (cam)
-			ray = cam.ScreenPointToRay(centerScreen);
-
 		// Find the center of the screen in pixels, incase the player's screen resolution has changed
 		centerScreen.x = cam.pixelWidth / 2;
 		centerScreen.y = cam.pixelHeight / 2;
+
+		// Update the ray from the player's view to be used for finding and manipulating objects
+		if (cam)
+			ray = cam.ScreenPointToRay(centerScreen);
 
 		if (rb)		// If the gun is currently holding an object...
 		{
@@ -70,42 +70,7 @@ public class MatterGun : MonoBehaviour {
 			{
 				if (!rb)		// If the gun is waiting to pick up a new object...
 				{
-					// ... raycast to find the first object infront of the player
-					RaycastHit[] hits = Physics.RaycastAll (ray, range);
-
-					// Ignore any collisions with the player
-					hits = hits.IgnoreChildren(this.gameObject);
-
-					if (hits.Length > 0)
-					{
-						// Order the array by distance from the player. (The order of a RaycastAll is not guaranteed and will sometimes be ordered backwards)
-						hits = hits.OrderByDistance(ray.origin);
-
-						// Get the closest object
-						hit = hits[0];
-
-						if (hit.transform)		// Double check the hit exists to avoid null reference exceptions
-						{
-							// Get the rigidbody of the object the player is aiming at
-							rb = hit.transform.GetComponent<Rigidbody>();
-
-							if (rb)		// If a rigidbody was successfully found...
-							{
-								// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
-								impactPointLocal = rb.transform.InverseTransformVector(hit.point - hit.transform.position);
-								RecalculateGrabPoint();
-
-								rbMode = rb.collisionDetectionMode;
-								rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-								rb.interpolation = RigidbodyInterpolation.Interpolate;
-
-								// Also store the current distance between the player and the object
-								holdDistance = Vector3.Distance(cam.transform.position, hit.point);
-
-								// TODO: OUTLINE THE OBJECT IN SOME WAY TO SHOW IT IS SELECTED
-							}
-						}
-					}
+					RaycastGetRigidBody();
 				}
 
 				// Allow the player to move the object
@@ -138,6 +103,46 @@ public class MatterGun : MonoBehaviour {
 
 			// Allow the player to rotate the object
 			HandleRotation();
+		}
+	}
+
+	private void RaycastGetRigidBody ()
+	{
+		// ... raycast to find the first object in front of the player
+		RaycastHit[] hits = Physics.RaycastAll (ray, range);
+
+		// Ignore any collisions with the player
+		hits = hits.IgnoreChildren(this.gameObject);
+
+		if (hits.Length > 0)
+		{
+			// Order the array by distance from the player. (The order of a RaycastAll is not guaranteed and will sometimes be ordered backwards)
+			hits = hits.OrderByDistance(ray.origin);
+
+			// Get the closest object
+			hit = hits[0];
+
+			if (hit.transform)		// Double check the hit exists to avoid null reference exceptions
+			{
+				// Get the rigidbody of the object the player is aiming at
+				rb = hit.transform.GetComponent<Rigidbody>();
+
+				if (rb)		// If a rigidbody was successfully found...
+				{
+					// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
+					impactPointLocal = rb.transform.InverseTransformVector(hit.point - hit.transform.position);
+					RecalculateGrabPoint();
+
+					rbMode = rb.collisionDetectionMode;
+					rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+					rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+					// Also store the current distance between the player and the object
+					holdDistance = Vector3.Distance(cam.transform.position, hit.point);
+
+					// TODO: OUTLINE THE OBJECT IN SOME WAY TO SHOW IT IS SELECTED
+				}
+			}
 		}
 	}
 

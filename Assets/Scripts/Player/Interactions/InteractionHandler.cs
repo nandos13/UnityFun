@@ -46,7 +46,13 @@ public class InteractionHandler : MBAction {
 		// Find the first hit that is not a part of the player
 		hits = hits.IgnoreChildren (this.gameObject);
 		if (hits.Length > 0)
+		{
+			// Sort hits array by distance from player (as this is not guaranteed)
+			hits = hits.OrderByDistance(transform.position);
+
+			// Get the closest hit
 			hit = hits[0];
+		}
 
 		if (hit.collider)
 		{
