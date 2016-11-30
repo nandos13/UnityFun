@@ -9,7 +9,7 @@ using System.Collections;
  * the game world and move them around. Created for fun :)
  */
 
-public class MatterGun : MonoBehaviour {
+public class MatterGun : UseableItem {
 
 	public Transform origin;											// Muzzle point for the gun. This determines where the rendered line will start
 	public LineRenderer line;											// LineRenderer component used
@@ -22,6 +22,7 @@ public class MatterGun : MonoBehaviour {
 	private Camera cam;													// Reference to the main camera (the player's vision)
 	private Vector3 centerScreen = new Vector3();						// The center of the player's screen in pixels
 	private PlayerAim aimScript;										// Reference to the aim script. This allows aiming to be disabled while rotating an object
+	private PlayerHeldItem heldScript;									// Reference to the held item script. This allows weapon changing through scrolling to be disabled when an object is held
 
 	private Ray ray;													// A ray used to find the objects in front of the player
 	private RaycastHit hit;												// The hit info for the object currently being manipulated
@@ -41,6 +42,9 @@ public class MatterGun : MonoBehaviour {
 
 		// Find the player's aiming script
 		aimScript = transform.GetComponentInParent<PlayerAim>();
+
+		// Find the player's held item script
+		heldScript = transform.GetComponentInParent<PlayerHeldItem>();
 	}
 
 	void Update ()
@@ -58,7 +62,16 @@ public class MatterGun : MonoBehaviour {
 			// ... Recalculate the position of the part which was grabbed
 			RecalculateGrabPoint();
 
+			// Disable weapon switching with the scroll wheel, then apply zoom
+			if (heldScript)
+				heldScript.enableScrollChange = false;
 			HandleZoom();
+		}
+		else
+		{
+			// Allow weapon changing with the scroll wheel
+			if (heldScript)
+				heldScript.enableScrollChange = true;
 		}
 	}
 
@@ -66,7 +79,7 @@ public class MatterGun : MonoBehaviour {
 	{
 		if (cam)
 		{
-			if (Input.GetMouseButton(0) && !throwLockMouse)		// If the gun is being used, and throw lock is not enabled...
+			if (use0 && !throwLockMouse)		// If the gun is being used, and throw lock is not enabled...
 			{
 				if (!rb)		// If the gun is waiting to pick up a new object...
 				{
@@ -94,7 +107,7 @@ public class MatterGun : MonoBehaviour {
 				}
 
 				// Unlock mouse pickup
-				if (!Input.GetMouseButton(0))
+				if (!use0)
 					throwLockMouse = false;
 
 				// Drop rigidbody object being manipulated
@@ -181,7 +194,7 @@ public class MatterGun : MonoBehaviour {
 
 	private void HandleThrow()		// Throw the object away from the player
 	{
-		if (rb && Input.GetMouseButton(1))
+		if (rb && use1)
 		{
 			// Lock mouse pickup, so the object is not immediately captured again. The user will have to let go of the mouse button to pick objects up again
 			throwLockMouse = true;
@@ -207,7 +220,7 @@ public class MatterGun : MonoBehaviour {
 
 	private void HandleRotation()		// Allow the player to rotate the object if they are holding down the scroll wheel
 	{
-		if (rb && Input.GetMouseButton(2))		// If an object is held and the player is rotating...
+		if (rb && use2)		// If an object is held and the player is rotating...
 		{
 			// ... Disable the player's aiming
 			if (aimScript)
@@ -227,6 +240,11 @@ public class MatterGun : MonoBehaviour {
 			if (aimScript)
 				aimScript.enabled = true;
 		}
+	}
+
+	public override void Unequip ()
+	{
+		rb = null;
 	}
 
 	void OnDrawGizmosSelected ()

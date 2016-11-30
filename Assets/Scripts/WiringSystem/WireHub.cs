@@ -60,6 +60,23 @@ public class WireHub : MBAction {
 		}
 	}
 
+	public static bool IsConnected (WireHub hubA, WireHub hubB)		// Queries whether the two specified hubs are connected
+	{
+		foreach (Wiring w in hubA.connections)
+		{
+			if (w != null)		// Double check the wire exists to avoid null reference exceptions
+			{
+				if (w.OtherConnection(hubA) == true)		// If the wire is a connection from hubA to hubB...
+				{
+					// ... The specified hubs are connected. Return true
+					return true;
+				}
+			}
+		}
+
+		return false;		// Not connected
+	}
+
 	public bool AddConnection(Wiring wire)		// Add a connection to this hub
 	{
 		foreach (Wiring w in connections)
@@ -96,6 +113,26 @@ public class WireHub : MBAction {
 				// ... Remove the wire
 				removed = true;
 				connections.Remove(w);
+				w.Remove();
+				break;
+			}
+		}
+
+		return removed;		// Return whether or not any wires were removed
+	}
+
+	public bool RemoveConnection(WireHub hub)		// Remove a connection from this hub
+	{
+		bool removed = false;
+		foreach (Wiring w in connections)
+		{
+			if (w.OtherConnection(this) == hub)		// If this wire is connected to the specified hub...
+			{
+				// ... Remove the wire
+				removed = true;
+				connections.Remove(w);
+				w.Remove();
+				break;
 			}
 		}
 

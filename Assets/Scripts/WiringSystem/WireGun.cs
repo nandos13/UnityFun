@@ -8,6 +8,7 @@ public class WireGun : UseableItem {
 
 	private WireHub nodeA;							// Stores the first selected connection
 	private WireHub nodeB;							// Stores the second selected connection
+	private bool removeMode = false;				// When true, wires are removed. When false, wires are added
 
 	private Ray ray;								// A ray used to find an object with a WireHub component infront of the player
 	private Camera cam;								// Reference to the player's view camera
@@ -68,9 +69,24 @@ public class WireGun : UseableItem {
 					ClearNodes();
 				else
 				{
-					// Two separate nodes have been selected. Create a new wire (the wire will automatically be attached to both nodes).
-					Wiring wire = new Wiring(nodeA, nodeB, wireRenderer);
-					// NOTE: Console may warn this variable is declared and never used. Disregard warning! The wire is automatically set up in the constructor
+					// Two separate nodes have been selected. Should a wire be created or removed?
+					if (removeMode)
+					{
+						// Remove wire between the two nodes
+						Debug.Log("removing connection from nodeA");
+						nodeA.RemoveConnection(nodeB);
+						Debug.Log("removing connection from nodeB");
+						nodeB.RemoveConnection(nodeA);
+					}
+					else
+					{
+						if (!WireHub.IsConnected(nodeA, nodeB))		// If the two are not connected...
+						{
+							// ... Create a new wire (the wire will automatically be attached to both nodes).
+							Wiring wire = new Wiring(nodeA, nodeB, wireRenderer);
+							// NOTE: Console may warn this variable is declared and never used. Disregard warning! The wire is automatically set up in the constructor
+						}
+					}
 
 					ClearNodes();
 				}
@@ -78,7 +94,17 @@ public class WireGun : UseableItem {
 		}
 	}
 
+	public override void Use1 ()		// (Right mouse) Toggle remove mode
+	{
+		removeMode = !removeMode;
+	}
+
 	public override void Use2 ()		// (Middle mouse) Clear current selection
+	{
+		ClearNodes();
+	}
+
+	public override void Unequip ()		// Reset nodes
 	{
 		ClearNodes();
 	}
