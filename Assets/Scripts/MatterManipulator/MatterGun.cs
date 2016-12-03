@@ -26,13 +26,19 @@ public class MatterGun : UseableItem {
 
 	private Ray ray;													// A ray used to find the objects in front of the player
 	private RaycastHit hit;												// The hit info for the object currently being manipulated
-	private Vector3 hitNormalInitial = Vector3.zero;					// Initial normal 
-	private Vector3 hitNormalOffset = Vector3.zero;
+	private Vector3 hitNormalInitial = Vector3.zero;					// Initial normal of the hold point
+	private Vector3 hitNormalOffset = Vector3.zero;						// Tracks normal of the hold point, updated each frame to take rotation into account
 	private Vector3 impactPointLocal = new Vector3();					// Offset of the grabbed point in local-space
-	private Vector3 impactPointOffset = new Vector3();					// Tracks world-space offset of the grabbed point
+	private Vector3 impactPointOffset = new Vector3();					// Tracks world-space offset of the grabbed point, from the held object's position
 	private CollisionDetectionMode rbMode;								// Stores the collision mode of the rigidbody so it can be reverted when dropped
 	private float holdDistance = 0;										// Tracks how far away from the player the object should be held
 	private bool throwLockMouse = false;								// Disables an object from being picked up immediately after being thrown with the gun
+
+	public LineRenderer lr;												// LineRenderer component used to draw the beam
+	private BezierCurve bc;												// Instance of a bezier curve class used to calculate the shape of the beam
+	private Vector3[] linePoints = new Vector3[10];						// An array of points along the beam
+	private float linePointStep = 1f / 9f;								// Pre-calculated to minimize multiplications done each frame. Allows for (almost) evenly spaced points along bezier to be calculated
+	private float currentStep = 0;										// The current point on the bezier being calculated
 
 	void Start () 
 	{
@@ -47,6 +53,13 @@ public class MatterGun : UseableItem {
 
 		// Find the player's held item script
 		heldScript = transform.GetComponentInParent<PlayerHeldItem>();
+
+		// Initialize line renderer
+		lr.SetVertexCount(10);
+		lr.SetWidth(0.05f, 0.05f);
+
+		// Initialize the Bezier Curve used for the visual beam
+		bc = new BezierCurve();
 	}
 
 	void Update ()
@@ -75,6 +88,9 @@ public class MatterGun : UseableItem {
 			if (heldScript)
 				heldScript.enableScrollChange = true;
 		}
+
+		// Render beam
+		RenderBeam();
 	}
 
 	void FixedUpdate () 
@@ -87,9 +103,6 @@ public class MatterGun : UseableItem {
 				{
 					RaycastGetRigidBody();
 				}
-
-				// Render beam
-				RenderBeam();
 
 				// Allow the player to move the object
 				HandleMovement();
@@ -167,9 +180,27 @@ public class MatterGun : UseableItem {
 
 	private void RenderBeam()		// Calculate and render a beam from the muzzle of the gun to the hold point
 	{
-		if (rb)
+		if (rb && origin)
 		{
-			//TODO: DRAW A BEZIER CURVE. DOWNLOAD ASSET STORE BEZIER CURVE ASSET! draw curve from muzzle to hitNormalOffset
+			// Enable the line renderer
+			lr.enabled = true;
+
+			// Set the points on the bezier curve
+			bc.SetPoints(impactPointOffset + rb.transform.position, hitNormalOffset * 10 + impactPointOffset + rb.transform.position, origin.position, origin.forward + origin.position);
+
+			// Calculate points on the line
+			currentStep = 0;
+			for (int i = 0; i < linePoints.Length; i++)
+			{
+				linePoints[i] = bc.GetPointAtTime(currentStep);
+				currentStep += linePointStep;
+			}
+
+			lr.SetPositions(linePoints);
+		}
+		else
+		{
+			lr.enabled = false;
 		}
 	}
 
