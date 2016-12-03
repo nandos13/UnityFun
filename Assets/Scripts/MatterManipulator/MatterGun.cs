@@ -26,6 +26,8 @@ public class MatterGun : UseableItem {
 
 	private Ray ray;													// A ray used to find the objects in front of the player
 	private RaycastHit hit;												// The hit info for the object currently being manipulated
+	private Vector3 hitNormalInitial = Vector3.zero;					// Initial normal 
+	private Vector3 hitNormalOffset = Vector3.zero;
 	private Vector3 impactPointLocal = new Vector3();					// Offset of the grabbed point in local-space
 	private Vector3 impactPointOffset = new Vector3();					// Tracks world-space offset of the grabbed point
 	private CollisionDetectionMode rbMode;								// Stores the collision mode of the rigidbody so it can be reverted when dropped
@@ -86,6 +88,9 @@ public class MatterGun : UseableItem {
 					RaycastGetRigidBody();
 				}
 
+				// Render beam
+				RenderBeam();
+
 				// Allow the player to move the object
 				HandleMovement();
 
@@ -144,6 +149,7 @@ public class MatterGun : UseableItem {
 				{
 					// ... Store information about the point that was hit. We take the offset of this position from the transform's position.
 					impactPointLocal = rb.transform.InverseTransformVector(hit.point - hit.transform.position);
+					hitNormalInitial = rb.transform.InverseTransformVector(hit.normal);
 					RecalculateGrabPoint();
 
 					rbMode = rb.collisionDetectionMode;
@@ -156,6 +162,14 @@ public class MatterGun : UseableItem {
 					// TODO: OUTLINE THE OBJECT IN SOME WAY TO SHOW IT IS SELECTED
 				}
 			}
+		}
+	}
+
+	private void RenderBeam()		// Calculate and render a beam from the muzzle of the gun to the hold point
+	{
+		if (rb)
+		{
+			//TODO: DRAW A BEZIER CURVE. DOWNLOAD ASSET STORE BEZIER CURVE ASSET! draw curve from muzzle to hitNormalOffset
 		}
 	}
 
@@ -190,6 +204,7 @@ public class MatterGun : UseableItem {
 	private void RecalculateGrabPoint()
 	{
 		impactPointOffset = rb.transform.TransformVector(impactPointLocal);
+		hitNormalOffset = rb.transform.rotation * hitNormalInitial;
 	}
 
 	private void HandleThrow()		// Throw the object away from the player
@@ -212,9 +227,11 @@ public class MatterGun : UseableItem {
 		float zoom = Input.GetAxis("Mouse ScrollWheel");
 		if (zoom != 0)
 		{
-			holdDistance += zoom * 10;
-			holdDistance = Mathf.Clamp (holdDistance, 4, range);
-			//TODO: Take into account collider bounds with minimum distance
+			if (holdDistance > 4 || zoom > 0)
+			{
+				holdDistance += zoom * 10;
+				holdDistance = Mathf.Clamp (holdDistance, 4, range);
+			}
 		}
 	}
 
@@ -226,13 +243,9 @@ public class MatterGun : UseableItem {
 			if (aimScript)
 				aimScript.enabled = false;
 
-			// Rotate the object based on the mouse movement
-			Vector3 moveDirection = new Vector3 (Input.GetAxis("Mouse Y"), -(Input.GetAxis("Mouse X")), 0);
-			moveDirection *= 10;
-			Debug.Log("MoveDir: " + moveDirection);
-			Debug.Log("Rotation: " + rb.rotation.eulerAngles);
-			//TODO: FINISH IMPLEMENTING ROTATION. CURRENT STUCK ON BUG WHERE ROTATING VIA QUATERNION ROTATION GETS STUCK AT 90 AND 270 DEGREES??
-			rb.MoveRotation(Quaternion.Euler(moveDirection + rb.rotation.eulerAngles));
+			// Rotate the object around it's pivot, about the player's axes, based on the mouse movement
+			rb.transform.RotateAround (rb.transform.position, transform.right, Input.GetAxis("Mouse Y") * 10);
+			rb.transform.RotateAround (rb.transform.position, transform.up, -(Input.GetAxis("Mouse X")) * 10);
 		}
 		else
 		{

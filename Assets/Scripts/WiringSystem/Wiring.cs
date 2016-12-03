@@ -31,6 +31,7 @@ public class Wiring {
 
 		// Set up line renderer
 		lrHolder = GameObject.Instantiate(wireRendeder);
+		lrHolder.hideFlags = HideFlags.HideInHierarchy;
 		lr = lrHolder.GetComponent<LineRenderer>();
 	}
 
@@ -44,7 +45,7 @@ public class Wiring {
 			if (lr)
 			{
 				lr.SetVertexCount(2);
-				Vector3[] positions = {nodeA.GetConnectorPosition, nodeB.GetConnectorPosition};
+				Vector3[] positions = {nodeA.ClosestConnectorPos(nodeB.transform.position), nodeB.ClosestConnectorPos(nodeA.transform.position)};
 				lr.SetPositions(positions);
 				// TODO: Calculate a line (with slack) from the two WireHub connector offset vectors
 				// TODO: Render line from these two points
@@ -62,6 +63,9 @@ public class Wiring {
 
 		// Remove the line renderer
 		lr.enabled = false;
+
+		// Destroy the wire render gameObject
+		GameObject.Destroy(lrHolder);
 	}
 
 	public static bool SameConnection (Wiring wA, Wiring wB)		// Determine if the two wires connect the same hubs

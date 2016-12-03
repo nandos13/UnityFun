@@ -77,7 +77,11 @@ public class PlayerWalk : MonoBehaviour {
 
 		// Apply sprint modifier
 		if (Input.GetKey(KeyCode.LeftShift))
-			targetVel *= sprintModifier;
+		{
+			// Check the angle the player is walking, and only allow sprinting if travelling forward
+			if (Vector3.Angle(targetVel, transform.forward) < 30)
+				targetVel *= sprintModifier;
+		}
 
 		// Calculate change in velocity
 		Vector3 currVel = rb.velocity;

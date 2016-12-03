@@ -21,6 +21,7 @@ public class WireGun : UseableItem {
 		if (!wireRenderer)
 		{
 			wireRenderer = new GameObject();
+			wireRenderer.hideFlags = HideFlags.HideInHierarchy;
 			LineRenderer lr = wireRenderer.AddComponent<LineRenderer>();
 			Material blackDiffuse = new Material(Shader.Find("Standard"));
 			blackDiffuse.color = Color.black;
@@ -111,6 +112,7 @@ public class WireGun : UseableItem {
 
 	private void ClearNodes ()
 	{
+		Debug.Log("Clearing stored nodes");
 		nodeA = null;
 		nodeB = null;
 	}

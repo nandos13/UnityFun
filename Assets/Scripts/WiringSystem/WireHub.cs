@@ -6,12 +6,7 @@ public class WireHub : MBAction {
 
 	public MBAction[] OnReceiveSignal;										// A list of actions to execute when this object receives a signal from any connected wires
 	[Tooltip("Determines where connected wires will visually attach to when rendered")]
-	public Vector3 connectorOffset;											// Visual attach point for wires
-	public Vector3 GetConnectorPosition
-	{
-		// Property returns world coords of the connection offset
-		get { return (connectorOffset + transform.position); }
-	}
+	public Vector3[] connectorPositions = new Vector3[0];					// Visual attach points for wires
 
 	private List<Wiring> connections = new List<Wiring>();					// A list of connected wires
 	private bool loopProtection = false;									// Prevents infinite loops from two hubs activating each other
@@ -27,6 +22,41 @@ public class WireHub : MBAction {
 			if (w != null)
 				w.RenderWire();
 		}
+	}
+
+	public Vector3 ClosestConnectorPos (Vector3 origin)		// Calculate the closest connector to the specified position
+	{
+		if (connectorPositions.Length == 0)
+			return transform.position;
+		else
+		{
+			Vector3 closest = transform.position;
+			float closestDist = float.MaxValue;
+			Vector3 worldSpacePos = new Vector3();
+			for (int i = 0; i < connectorPositions.Length; i++)
+			{
+				worldSpacePos = OffsetPointWorldPos(i);
+				if (Vector3.Distance (worldSpacePos, origin) < closestDist)		// If this position is closer to the parameter origin than the current closest Vector3...
+				{
+					// ... Store this position as the closest
+					closest = worldSpacePos;
+					closestDist = Vector3.Distance (worldSpacePos, origin);
+				}
+			}
+
+			return closest;		// Return the closest vector to origin
+		}
+	}
+
+	private Vector3 OffsetPointWorldPos (int i)		// Calculate the world position of a connection point, accounting for rotation
+	{
+		if (i < connectorPositions.Length)		// If the specified index exists in the array of positions...
+		{
+			// ... Use transform rotation and position to calculate world position
+			return ((transform.rotation * connectorPositions[i]) + transform.position);
+		}
+		else
+			return transform.position;		// The connector position does not exist
 	}
 
 	public override void Execute ()		// Activates the wire
@@ -66,7 +96,7 @@ public class WireHub : MBAction {
 		{
 			if (w != null)		// Double check the wire exists to avoid null reference exceptions
 			{
-				if (w.OtherConnection(hubA) == true)		// If the wire is a connection from hubA to hubB...
+				if (w.OtherConnection(hubA) == hubB)		// If the wire is a connection from hubA to hubB...
 				{
 					// ... The specified hubs are connected. Return true
 					return true;
@@ -143,6 +173,12 @@ public class WireHub : MBAction {
 	{
 		// Draw the attachment point
 		Gizmos.color = Color.green;
-		Gizmos.DrawWireSphere((transform.position + connectorOffset), 0.1f);
+		if (connectorPositions.Length > 0)
+		{
+			for (int i = 0; i < connectorPositions.Length; i++)
+			{
+				Gizmos.DrawWireSphere(OffsetPointWorldPos(i), 0.1f);
+			}
+		}
 	}
 }

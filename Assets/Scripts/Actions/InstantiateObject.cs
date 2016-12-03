@@ -4,6 +4,7 @@ using System.Collections;
 public class InstantiateObject : MBAction {
 
 	public GameObject obj;
+	public bool hideInHeirarchy = false;
 	public Vector3 spawnOffset = Vector3.zero;
 	public Vector3 spawnRotation = Vector3.zero;
 
@@ -13,6 +14,8 @@ public class InstantiateObject : MBAction {
 		{
 			// Instantiate a new object
 			GameObject newObj = (GameObject)Instantiate(obj, (transform.position + spawnOffset), Quaternion.Euler(spawnRotation)) as GameObject;
+			if (hideInHeirarchy)
+				newObj.hideFlags = HideFlags.HideInHierarchy;
 		}
 	}
 
