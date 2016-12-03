@@ -11,8 +11,7 @@ using System.Collections;
 
 public class MatterGun : UseableItem {
 
-	public Transform origin;											// Muzzle point for the gun. This determines where the rendered line will start
-	public LineRenderer line;											// LineRenderer component used
+	public Vector3 origin;												// Muzzle point for the gun. This determines where the rendered line will start
 	[Range (5.0f, 300.0f)]
 	public float range = 30.0f;											// Maximum range of the gun
 	[Range (0.0f, 100.0f)]
@@ -34,7 +33,7 @@ public class MatterGun : UseableItem {
 	private float holdDistance = 0;										// Tracks how far away from the player the object should be held
 	private bool throwLockMouse = false;								// Disables an object from being picked up immediately after being thrown with the gun
 
-	public LineRenderer lr;												// LineRenderer component used to draw the beam
+	public LineRenderer line;											// LineRenderer component used to draw the beam
 	private BezierCurve bc;												// Instance of a bezier curve class used to calculate the shape of the beam
 	private Vector3[] linePoints = new Vector3[10];						// An array of points along the beam
 	private float linePointStep = 1f / 9f;								// Pre-calculated to minimize multiplications done each frame. Allows for (almost) evenly spaced points along bezier to be calculated
@@ -55,8 +54,11 @@ public class MatterGun : UseableItem {
 		heldScript = transform.GetComponentInParent<PlayerHeldItem>();
 
 		// Initialize line renderer
-		lr.SetVertexCount(10);
-		lr.SetWidth(0.05f, 0.05f);
+		if (line)
+		{
+			line.SetVertexCount(linePoints.Length);
+			line.SetWidth(0.05f, 0.05f);
+		}
 
 		// Initialize the Bezier Curve used for the visual beam
 		bc = new BezierCurve();
@@ -115,8 +117,6 @@ public class MatterGun : UseableItem {
 				// Gun is not being used, reset changed properties on the rigidbody
 				if (rb)
 				{
-					// TODO: remove outline here. Not sure yet how this outline will even be achieved.
-
 					// Reset collision detection mode
 					rb.collisionDetectionMode = rbMode;
 
@@ -171,8 +171,6 @@ public class MatterGun : UseableItem {
 
 					// Also store the current distance between the player and the object
 					holdDistance = Vector3.Distance(cam.transform.position, hit.point);
-
-					// TODO: OUTLINE THE OBJECT IN SOME WAY TO SHOW IT IS SELECTED
 				}
 			}
 		}
@@ -180,28 +178,52 @@ public class MatterGun : UseableItem {
 
 	private void RenderBeam()		// Calculate and render a beam from the muzzle of the gun to the hold point
 	{
-		if (rb && origin)
+		if (line)
 		{
-			// Enable the line renderer
-			lr.enabled = true;
-
-			// Set the points on the bezier curve
-			bc.SetPoints(impactPointOffset + rb.transform.position, hitNormalOffset * 10 + impactPointOffset + rb.transform.position, origin.position, origin.forward + origin.position);
-
-			// Calculate points on the line
-			currentStep = 0;
-			for (int i = 0; i < linePoints.Length; i++)
+			if (rb)		// If an object is being held...
 			{
-				linePoints[i] = bc.GetPointAtTime(currentStep);
-				currentStep += linePointStep;
-			}
+				// ... Calculate and display a curve from the gun to the object
 
-			lr.SetPositions(linePoints);
+				//Enable the line renderer and set vertex count
+				line.enabled = true;
+				line.SetVertexCount(linePoints.Length);
+
+				// Set the points on the bezier curve
+				bc.SetPoints(impactPointOffset + rb.transform.position, hitNormalOffset * 10 + impactPointOffset + rb.transform.position, transform.forward + OriginToWorld, OriginToWorld);
+
+				// Calculate points on the line
+				currentStep = 0;
+				for (int i = 0; i < linePoints.Length; i++)
+				{
+					linePoints[i] = bc.GetPointAtTime(currentStep);
+					currentStep += linePointStep;
+				}
+
+				line.SetPositions(linePoints);
+			}
+			else
+			{
+				if (use0)		// If the gun is being used to find a new object...
+				{
+					// ... Display a straight beam from the gun
+
+					//Enable the line renderer and set vertex count
+					line.enabled = true;
+					line.SetVertexCount(2);
+
+					// Set the points on the beam
+					line.SetPosition(0, OriginToWorld);
+					line.SetPosition(1, ray.GetPoint(1000));
+				}
+				else
+					line.enabled = false;		// The gun is not being used
+			}
 		}
-		else
-		{
-			lr.enabled = false;
-		}
+	}
+
+	private Vector3 OriginToWorld		// Converts the origin offset to world coordinates, accounting for transform rotation
+	{
+		get { return transform.rotation * origin + transform.position; }
 	}
 
 	private void HandleMovement()		// Applies physics manipulation to the held object
@@ -295,5 +317,8 @@ public class MatterGun : UseableItem {
 	{
 		Gizmos.color = Color.green;
 		Gizmos.DrawLine(ray.origin, ray.GetPoint(range));
+
+		Gizmos.color = Color.magenta;
+		Gizmos.DrawWireSphere(OriginToWorld, 0.06f);
 	}
 }

@@ -55,11 +55,11 @@ public class BezierCurve {
 		if (t > 1 || t < 0)
 			Debug.LogWarning("Warning: BezierCurve.GetPointAtTime(t) parameter t should be between 0 and 1");
 		
-		float u = 1f - t;
-		float tt = t * t;
-		float uu = u * u;
-		float uuu = uu * u;
-		float ttt = tt * t;
+		u = 1f - t;
+		tt = t * t;
+		uu = u * u;
+		uuu = uu * u;
+		ttt = tt * t;
 
 		Vector3 p = uuu * p0;
 		temp = (uu * t * p1);

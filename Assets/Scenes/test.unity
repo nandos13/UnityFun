@@ -1223,7 +1223,6 @@ GameObject:
   - 33: {fileID: 714280184}
   - 23: {fileID: 714280183}
   - 114: {fileID: 714280185}
-  - 120: {fileID: 714280186}
   m_Layer: 8
   m_Name: TempGun
   m_TagString: Untagged
@@ -1296,51 +1295,10 @@ MonoBehaviour:
   use1: 0
   use2: 0
   itemName: Gravity Gun
-  origin: {fileID: 944066197}
-  line: {fileID: 0}
+  origin: {x: 0, y: 0, z: 0.3}
   range: 500
   strength: 40.2
-  lr: {fileID: 714280186}
---- !u!120 &714280186
-LineRenderer:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 714280181}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_MotionVectors: 1
-  m_LightProbeUsage: 0
-  m_ReflectionProbeUsage: 0
-  m_Materials:
-  - {fileID: 0}
-  m_SubsetIndices: 
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_SelectedWireframeHidden: 0
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_Positions: []
-  m_Parameters:
-    startWidth: 1
-    endWidth: 1
-    m_StartColor:
-      serializedVersion: 2
-      rgba: 4294967295
-    m_EndColor:
-      serializedVersion: 2
-      rgba: 4294967295
-  m_UseWorldSpace: 1
+  line: {fileID: 944066199}
 --- !u!1 &755183228
 GameObject:
   m_ObjectHideFlags: 0
@@ -1503,6 +1461,7 @@ GameObject:
   m_Component:
   - 4: {fileID: 944066197}
   - 114: {fileID: 944066198}
+  - 120: {fileID: 944066199}
   m_Layer: 8
   m_Name: Muzzle
   m_TagString: Untagged
@@ -1539,6 +1498,46 @@ MonoBehaviour:
   use2: 0
   itemName: Wire Tool
   range: 30
+--- !u!120 &944066199
+LineRenderer:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 944066196}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 1094d34279decff49bf393c05c63cf16, type: 2}
+  m_SubsetIndices: 
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_SelectedWireframeHidden: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_Positions: []
+  m_Parameters:
+    startWidth: 1
+    endWidth: 1
+    m_StartColor:
+      serializedVersion: 2
+      rgba: 4294967295
+    m_EndColor:
+      serializedVersion: 2
+      rgba: 4294967295
+  m_UseWorldSpace: 1
 --- !u!1 &985473136
 GameObject:
   m_ObjectHideFlags: 0
